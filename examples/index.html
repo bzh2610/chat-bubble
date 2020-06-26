@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Chat Flows with chat-bubble</title>
+
+    <!-- for mobile screens -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- stylesheets are conveniently separated into components -->
+    <link rel="stylesheet" media="all" href="../component/styles/setup.css">
+    <link rel="stylesheet" media="all" href="../component/styles/says.css">
+    <link rel="stylesheet" media="all" href="../component/styles/reply.css">
+    <link rel="stylesheet" media="all" href="../component/styles/typing.css">
+    <link rel="stylesheet" media="all" href="../component/styles/input.css">
+    <style>
+        body {
+            background: #dcdde0;
+        }
+
+        .bubble-container {
+            height: 100vh;
+        }
+
+        .bubble-container .input-wrap textarea {
+            margin: 0;
+            width: calc(100% - 30px);
+        }
+
+        !.bubble.say span table{
+          width: 300px !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- container element for chat window -->
+    <div id="chat"></div>
+
+    <!-- import the JavaScript file -->
+    <script src="../component/Bubbles.js"></script>
+    <script>
+
+      var chatWindow = new Bubbles(document.getElementById("chat"), "chatWindow", {
+  // the one that we care about is inputCallbackFn()
+  // this function returns an object with some data that we can process from user input
+  // and understand the context of it
+
+  // this is an example function that matches the text user typed to one of the answer bubbles
+  // this function does no natural language processing
+  // this is where you may want to connect this script to NLC backend.
+  inputCallbackFn: function(o) {
+    // add error conversation block & recall it if no answer matched
+    var miss = function() {
+      chatWindow.talk(
+        {
+          "i-dont-get-it": {
+            says: [
+              "Sorry, I don't get it 😕. Pls repeat? Or you can just click below 👇"
+            ],
+            reply: o.convo[o.standingAnswer].reply
+          }
+        },
+        "i-dont-get-it"
+      )
+    }
+
+    // do this if answer found
+    var match = function(key) {
+      setTimeout(function() {
+        chatWindow.talk(convo, key) // restart current convo from point found in the answer
+      }, 600)
+    }
+
+    // sanitize text for search function
+    var strip = function(text) {
+      return text.toLowerCase().replace(/[\s.,\/#!$%\^&\*;:{}=\-_'"`~()]/g, "")
+    }
+
+    // search function
+    var found = false
+    o.convo[o.standingAnswer].reply.forEach(function(e, i) {
+      strip(e.question).includes(strip(o.input)) && o.input.length > 0
+        ? (found = e.answer)
+        : found ? null : (found = false)
+    })
+    found ? match(found) : miss()
+  }
+}) // done setting up chat-bubble
+
+    // conversation object stored in separate variable:
+var convo = {
+  // "ice" (as in "breaking the ice") is a required conversation object
+  // that maps the first thing the bot will say to the user
+  ice: {
+    // "says" defines an array of sequential bubbles
+    // that the bot will produce
+    says: [
+      "Hello!",
+      "What can I help you with ?"
+    ],
+    // "reply" is an array of possible options the user can pick from
+    // as a reply
+    reply: [
+      {
+        question: "I need shopping advise", // label for the reply option
+        answer: "chapter-one" // key for the next conversation object
+      },
+      {
+        question: "Track my order.", // label for the reply option
+        answer: "end" // key for an "escape valve"; we refer to this whenever a reply signals the end of the convo
+      },
+      /*{
+        question: "What “other special things?”", // label for the reply option
+        answer: "sidetrack" // key for a "side note" we can reference from multiple points in the chat
+      }*/
+    ]
+  }, // end required "ice" conversation object
+
+  // side note
+  sidetrack: {
+    says: [
+      "Things which go way beyond a single topic of conversation!",
+      "<img src=https://meanbusiness.com/wp-content/uploads/2018/04/Walk-Cycle-Banana-Jelly-Bean-GIF-by-Ethan-Barnowsky-source.gif />",
+      "As in this case we are branching out from the main topic of “bananas and ice cream” into another series of prompts and possible replies.",
+      "This could be a useful way provide more instructions or context."
+    ],
+    reply: [
+      {
+        question: "Tell me more.",
+        answer: "intro-context" // key for another side note; in this instance, we're using it to contextualize the Q&A we're heading into
+      },
+      {
+        question: "Got it: on with the chat!",
+        answer: "chapter-one" // no further sidetrack required, returning to the main conversation tree
+      }
+    ]
+  },
+
+  // another side note
+  "intro-context": {
+    says: [
+      "This is an example of further instructions...",
+      "...Context and side-notes...",
+      "...With a way to return back to the main trunk of the conversation, like so:"
+    ],
+    reply: [
+      {
+        question: "To the main topic, bananas and ice cream!",
+        answer: "chapter-one"
+      }
+    ]
+  },
+
+  // main conversation trunk
+  "chapter-one": {
+    says: [
+      "Excellent!",
+      "Let's see how I can help you",
+      "What kind of product are you looking for ?"
+    ],
+    reply: [
+      {
+        question: "Tablet",
+        answer: "chapter-two" // here both replies send people onto the same next chapter
+      },
+      {
+        question: "Computer", // both replies send people onto the same next chapter
+        answer: "chapter-two"
+      },
+      {
+        question: "I'm not sure",
+        answer: "intro-context"
+      }
+    ]
+  },
+  "chapter-two": {
+    says: [
+      "First of all, what would you like to do with this device ?",
+    ],
+    reply: [
+      {
+        question: "🌍 Web browsing",
+        answer: "chapter-three"
+      },
+      {
+        question: "🎮 Gaming",
+        answer: "chapter-three"
+      },
+      {
+        question: "🎨 Photography / design",
+        answer: "chapter-three"
+      },
+      {
+        question: "📱 Software development",
+        answer: "chapter-three" // an example of using the Escape Valve for ineligible, Not Applicable participants
+      }
+    ]
+  },
+
+  // this chapter is skipped
+  "chapter-three": {
+    // we skip this in this example to show you can do that; use it if you want.
+    says: [
+      "Looking for something which will suits your needs..",
+      "Is there an operating system you would prefer ?"
+    ],
+    reply: [
+      {
+        question: " iOS",
+        answer: "chapter-four"
+      },
+      {
+        question: "🤖 Android",
+        answer: "chapter-four"
+      },
+      {
+        question: "I don't know",
+        answer: "chapter-four"
+      }
+    ]
+  },
+
+  // continue with main conversation trunk
+  "chapter-four": {
+    says: [
+      "Okay these products looks like good fits for your needs",
+      "<b>iPad Pro 12.9 inches</b><br><img src=https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/ipad-pro-12-select-cell-silver-202003_GEO_FR?wid=940&hei=1112&fmt=png-alpha&qlt=80&.v=1583550056833 />",
+      "<b>iPad Air 2019</b><br><img src=https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/ipad-air-select-wifi-silver-201911_GEO_FR?wid=940&hei=1112&fmt=png-alpha&qlt=80&.v=1574905708011 />",
+      "Would you like more information ?"
+    ],
+    reply: [
+      {
+        question: "For sure !",
+        answer: "chapter-five"
+      },
+      {
+        question: "Just take me to checkout!",
+        answer: "chapter-five"
+      },
+      {
+        question: "I don't like these options",
+        answer: "chapter-five"
+      }
+    ]
+  },
+  "chapter-five": {
+    says: [
+      "Okay here's a comparison for the features of these products", // call a function to an external resource / application outside of chat-bubble's purview
+      "<table class=\"compare\" style=\"width: 450px; border: 1px solid black;\">\
+      <tr><th>Model</td><td>iPad Pro 2020 12.9“</td><td>iPad Air 2019</td></tr>\
+      <tr><td>Screen size</td><td>12.9“</td><td>11“</td></tr>\
+      <tr><td>CPU</td><td>A12Z</td><td>A12</td></tr>\
+      <tr><td>Keyboard compatible</td><td>✅</td><td>✅</td></tr>\
+      <tr><td>Trackpad compatible</td><td>✅</td><td>❌</td></tr>\
+      <tr><td>Price</td><td>From 1099€</td><td>From 569€</td></tr>\
+      </table>",
+      "Which options seems the best for your needs ?" // call a function to an external resource / application outside of chat-bubble's purview
+    ],
+    reply: [
+      {
+        question: "iPad Pro",
+        answer: "externalResourceFunction"
+      },
+      {
+        question: "iPad Air!",
+        answer: "externalResourceFunction" // function name that will be executed
+      }
+    ]
+  },
+  end: {
+    says: [
+      "Thanks for your time and attention.",
+      "I hope my advice has been helpful 😇",
+      ],
+    reply: [
+      {
+        question: "Start over 😁",
+        answer: "ice"
+      }
+    ]
+  }
+} // end conversation object
+
+// initialize by constructing a named function...
+var chatWindow = new Bubbles(
+  document.getElementById("chat"), // ...passing HTML container element...
+  "chatWindow" // ...and name of the function as a parameter
+)
+
+// `.talk()` will get your bot to begin the conversation
+chatWindow.talk(
+  // pass your JSON/JavaScript object to `.talk()` function where
+  // you define how the conversation between the bot and user will go
+  convo
+)
+
+// this function is called when user clicks "Yes!" in the "chapter-four" dialogue
+externalResourceFunction = function() {
+  // together with the function we'll restart the conversation starting from "capther-four"
+  // to make sure the user isn't left hanging after the function below has been executed
+  chatWindow.talk(convo, "end")
+
+  // function that opens external window
+  window.open(
+    "https://checkout.stripe.com/pay/ppage_1Go5pLFKnpzPB0MXqu0HqXu2#fidkdWxOYHwnPyd1blpxYHZxWm9CPHY2XUhhVm9fQzxOYWgwYjA8f2lcYScpJ3dgY2B3d2B3SndsYmxrJz8nbXFxdXY%2FKip2cXdsdWArZmpoJyknaWpmZGlgJz9rcGlpKSdobGF2Jz9%2BJ2JwbGEnPydmZDw0YzJkYyhmMzY9KDFgMmEoPDw2YCg3ZjRhZmEyNGA9ZDEnKSdocGxhJz8nY2YzNWZnN2coMGA0ZigxPTw8KGRkNmYoNjNgZzRhPDEwZzYwJykndmxhJz8nNWAxZzJjPGAoPDxkMSgxPWFhKD00M2EoPTUwMjAwMmNjNjFgJ3gpJ2dgcWR2Jz9eWHgl",
+    "_blank",
+    "toolbar=no,scrollbars=no,menubar=no,resizable=no,location=no,titlebar=no,width=600,height=600"
+  )
+}
+</script>
+</body>
+
+</html>
