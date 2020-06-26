@@ -20,5 +20,13 @@
   "bugs": {
     "url": "https://github.com/dmitrizzle/chat-bubble/issues"
   },
-  "homepage": "https://github.com/dmitrizzle/chat-bubble#readme"
+  "homepage": "https://github.com/dmitrizzle/chat-bubble#readme",
+  "dependencies": {
+    "babel-core": "^6.26.3",
+    "babel-loader": "^8.1.0",
+    "babel-preset-es2015": "^6.24.1",
+    "chat-bubble": "^1.4.0",
+    "webpack": "^4.43.0",
+    "webpack-dev-server": "^3.11.0"
+  }
 }
